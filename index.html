@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <!-- 核心自适应标签 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>微信群聊二维码 | 扫码进群</title>
+  <style>
+    /* 全局样式重置 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Microsoft YaHei", 微软雅黑, sans-serif;
+    }
+    body {
+      background-color: #f5f5f5;
+      padding: 20px 0;
+    }
+    /* 页面容器 - 最大宽度限制，居中显示 */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    /* 页面标题 */
+    .page-title {
+      text-align: center;
+      color: #333;
+      font-size: clamp(20px, 5vw, 32px);
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+    /* 说明文字 */
+    .page-desc {
+      text-align: center;
+      color: #666;
+      font-size: clamp(14px, 2vw, 16px);
+      margin-bottom: 40px;
+    }
+    /* 二维码卡片容器 - 弹性布局，自适应换行 */
+    .qrcode-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 30px;
+    }
+    /* 二维码卡片样式 */
+    .qrcode-card {
+      width: clamp(200px, 80vw, 300px);
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      padding: 25px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+    /* 卡片hover动效 */
+    .qrcode-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+    }
+    /* 群名样式 */
+    .card-name {
+      color: #333;
+      font-size: clamp(16px, 3vw, 18px);
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+    /* 二维码图片样式 - 自适应宽度，防止变形 */
+    .qrcode-img {
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      border: 1px solid #eee;
+    }
+    /* 二维码下方提示 */
+    .qrcode-tip {
+      margin-top: 15px;
+      color: #999;
+      font-size: clamp(12px, 2vw, 14px);
+      line-height: 1.5;
+    }
+    /* 加载状态样式 */
+    .loading {
+      text-align: center;
+      color: #666;
+      font-size: 16px;
+      padding: 50px 0;
+    }
+    /* 错误提示样式 */
+    .error {
+      text-align: center;
+      color: #e53935;
+      font-size: 16px;
+      padding: 50px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="page-title">微信群聊扫码进群</h1>
+    <p class="page-desc">长按识别下方二维码，加入对应群聊</p>
+    <!-- 二维码列表容器 -->
+    <div class="qrcode-list" id="qrcodeList">
+      <!-- 加载状态 -->
+      <div class="loading" id="loading">正在加载二维码...</div>
+    </div>
+  </div>
+
+  <script>
+    // 获取页面元素
+    const qrcodeList = document.getElementById('qrcodeList');
+    const loading = document.getElementById('loading');
+
+    // 加载二维码JSON配置
+    function loadQrcode() {
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', 'qrcode.json', true);
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          // 隐藏加载状态
+          loading.style.display = 'none';
+          if (xhr.status === 200) {
+            // 解析JSON数据
+            const qrcodeData = JSON.parse(xhr.responseText);
+            if (qrcodeData.length === 0) {
+              qrcodeList.innerHTML = '<div class="error">暂无二维码数据</div>';
+              return;
+            }
+            // 渲染二维码卡片
+            renderQrcode(qrcodeData);
+          } else {
+            // 加载失败提示
+            qrcodeList.innerHTML = '<div class="error">二维码加载失败，请刷新页面重试</div>';
+          }
+        }
+      };
+      // 网络错误处理
+      xhr.onerror = function() {
+        loading.style.display = 'none';
+        qrcodeList.innerHTML = '<div class="error">网络错误，无法加载二维码</div>';
+      };
+      xhr.send();
+    }
+
+    // 渲染二维码卡片
+    function renderQrcode(data) {
+      let html = '';
+      data.forEach(item => {
+        html += `
+          <div class="qrcode-card">
+            <h3 class="card-name">${item.groupName}</h3>
+            <img src="${item.qrcodeUrl}" alt="${item.groupName}微信群二维码" class="qrcode-img">
+            <p class="qrcode-tip">微信长按识别 | 二维码过期请联系管理员</p>
+          </div>
+        `;
+      });
+      qrcodeList.innerHTML = html;
+    }
+
+    // 页面加载完成后执行
+    window.onload = loadQrcode;
+  </script>
+</body>
+</html>
