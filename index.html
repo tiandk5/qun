@@ -38,6 +38,7 @@
       flex-wrap: wrap;
       justify-content: center;
       gap: 30px;
+      margin-bottom: 60px;
     }
     .qrcode-card {
       width: clamp(200px, 80vw, 300px);
@@ -93,6 +94,92 @@
       font-size: 16px;
       padding: 50px 0;
     }
+
+    /* 新增常见问题样式 */
+    .faq-section {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      padding: 30px clamp(15px, 5vw, 30px);
+      margin-bottom: 40px;
+    }
+    .faq-title {
+      font-size: clamp(18px, 4vw, 24px);
+      color: #333;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 30px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+    .faq-list {
+      display: grid;
+      gap: 15px;
+    }
+    .faq-item {
+      border-radius: 8px;
+      background: #f9f9f9;
+      padding: 15px;
+      transition: all 0.2s ease;
+    }
+    .faq-item:hover {
+      background: #f5f5f5;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    .faq-question {
+      font-size: clamp(14px, 2vw, 16px);
+      color: #333;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: flex-start;
+    }
+    .faq-question::before {
+      content: "Q：";
+      color: #007aff;
+      font-weight: 700;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+    .faq-answer {
+      font-size: clamp(13px, 2vw, 15px);
+      color: #666;
+      line-height: 1.6;
+      display: flex;
+      align-items: flex-start;
+    }
+    .faq-answer::before {
+      content: "A：";
+      color: #4cd964;
+      font-weight: 700;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+    .faq-loading {
+      text-align: center;
+      color: #666;
+      font-size: 16px;
+      padding: 20px 0;
+    }
+    .faq-error {
+      text-align: center;
+      color: #e53935;
+      font-size: 16px;
+      padding: 20px 0;
+    }
+
+    /* 响应式优化 */
+    @media (min-width: 768px) {
+      .faq-list {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+      }
+    }
+    @media (min-width: 1024px) {
+      .faq-list {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
   </style>
 </head>
 <body>
@@ -102,13 +189,22 @@
     <div class="qrcode-list" id="qrcodeList">
       <div class="loading" id="loading">正在加载二维码...</div>
     </div>
+
+    <!-- 新增常见问题板块 -->
+    <div class="faq-section">
+      <h2 class="faq-title">常见问题解答</h2>
+      <div class="faq-list" id="faqList">
+        <div class="faq-loading">正在加载常见问题...</div>
+      </div>
+    </div>
   </div>
 
   <script>
     const qrcodeList = document.getElementById('qrcodeList');
     const loading = document.getElementById('loading');
+    const faqList = document.getElementById('faqList');
 
-    // 加载JSON
+    // 加载二维码JSON
     function loadQrcode() {
       fetch('qrcode.json')
         .then(res => res.json())
@@ -122,7 +218,7 @@
         });
     }
 
-    // 渲染卡片（支持主图+备用图）
+    // 渲染二维码卡片（支持主图+备用图）
     function renderQrcode(data) {
       let html = '';
       data.forEach(item => {
@@ -144,7 +240,37 @@
       qrcodeList.innerHTML = html;
     }
 
-    window.addEventListener('DOMContentLoaded', loadQrcode);
+    // 加载常见问题JSON
+    function loadFaq() {
+      fetch('faq.json')
+        .then(res => res.json())
+        .then(data => {
+          renderFaq(data);
+        })
+        .catch(err => {
+          faqList.innerHTML = '<div class="faq-error">常见问题加载失败，请刷新重试</div>';
+        });
+    }
+
+    // 渲染常见问题
+    function renderFaq(data) {
+      let html = '';
+      data.forEach((item, index) => {
+        html += `
+          <div class="faq-item">
+            <div class="faq-question">${item.question}</div>
+            <div class="faq-answer">${item.answer}</div>
+          </div>
+        `;
+      });
+      faqList.innerHTML = html;
+    }
+
+    // 页面加载完成后执行
+    window.addEventListener('DOMContentLoaded', () => {
+      loadQrcode();
+      loadFaq();
+    });
   </script>
 </body>
 </html>
