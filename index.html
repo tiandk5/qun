@@ -20,6 +20,96 @@
       margin: 0 auto;
       padding: 0 20px;
     }
+    
+    /* ========= 新增通知栏样式 ========= */
+    .notice-bar {
+      max-width: 1200px;
+      margin: 0 auto 20px auto;
+      padding: 0 20px;
+      transition: all 0.3s ease;
+    }
+    .notice-content {
+      background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+      border-radius: 20px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+      backdrop-filter: blur(2px);
+      border: 1px solid rgba(255, 215, 150, 0.6);
+      position: relative;
+      overflow: hidden;
+    }
+    .notice-content::before {
+      content: "✨";
+      position: absolute;
+      left: -20px;
+      top: -10px;
+      font-size: 80px;
+      opacity: 0.1;
+      pointer-events: none;
+      transform: rotate(-15deg);
+    }
+    .notice-text {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .notice-icon {
+      font-size: 28px;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    }
+    .notice-message {
+      font-size: clamp(14px, 4vw, 18px);
+      font-weight: 600;
+      color: #b84c2c;
+      letter-spacing: 1px;
+      text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+      background: rgba(255,245,225,0.7);
+      padding: 6px 16px;
+      border-radius: 40px;
+      backdrop-filter: blur(2px);
+      display: inline-block;
+    }
+    .notice-message strong {
+      font-weight: 800;
+      color: #c0392b;
+    }
+    .notice-close {
+      background: rgba(184, 76, 44, 0.2);
+      border: none;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 20px;
+      color: #b84c2c;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(4px);
+      flex-shrink: 0;
+    }
+    .notice-close:hover {
+      background: #b84c2c;
+      color: #fff;
+      transform: scale(1.05);
+      box-shadow: 0 2px 8px rgba(184, 76, 44, 0.3);
+    }
+    .notice-close:active {
+      transform: scale(0.96);
+    }
+    /* 隐藏通知栏类 */
+    .notice-bar.hide-notice {
+      display: none;
+    }
+    
+    /* 原有样式保持完全不变 */
     .page-title {
       text-align: center;
       color: #333;
@@ -95,7 +185,7 @@
       padding: 50px 0;
     }
 
-    /* 新增常见问题样式 */
+    /* 常见问题样式 */
     .faq-section {
       background: #fff;
       border-radius: 12px;
@@ -112,7 +202,6 @@
       padding-bottom: 15px;
       border-bottom: 2px solid #f0f0f0;
     }
-    /* 搜索框样式 */
     .faq-search {
       position: relative;
       max-width: 600px;
@@ -182,7 +271,6 @@
       margin-right: 8px;
       flex-shrink: 0;
     }
-    /* 高亮匹配文本 */
     .highlight {
       color: #007aff;
       font-weight: 700;
@@ -220,7 +308,6 @@
       padding: 40px 0;
     }
 
-    /* 响应式优化 */
     @media (min-width: 768px) {
       .faq-list {
         grid-template-columns: repeat(2, 1fr);
@@ -235,6 +322,19 @@
   </style>
 </head>
 <body>
+  <!-- 顶部通知栏：欢迎大明的朋友们回家 -->
+  <div class="notice-bar" id="noticeBar">
+    <div class="notice-content">
+      <div class="notice-text">
+        <span class="notice-icon">🏮🏯</span>
+        <span class="notice-message">
+          <strong>欢迎大明的朋友们回家</strong>，让我们做大做强再创辉煌！✨
+        </span>
+      </div>
+      <button class="notice-close" id="closeNoticeBtn" aria-label="关闭通知">✕</button>
+    </div>
+  </div>
+
   <div class="container">
     <h1 class="page-title">微信群聊扫码进群</h1>
     <p class="page-desc">长按识别下方二维码，加入对应群聊</p>
@@ -242,10 +342,9 @@
       <div class="loading" id="loading">正在加载二维码...</div>
     </div>
 
-    <!-- 新增常见问题板块 -->
+    <!-- 常见问题板块 -->
     <div class="faq-section">
       <h2 class="faq-title">常见问题解答</h2>
-      <!-- 新增搜索框 -->
       <div class="faq-search">
         <span class="faq-search-icon">🔍</span>
         <input type="text" class="faq-search-input" id="faqSearchInput" placeholder="输入关键词搜索问题，例如：吕布、元宝、华佗、南蛮...">
@@ -266,6 +365,26 @@
     // 存储原始FAQ数据
     let faqOriginalData = [];
 
+    // ---------- 通知栏隐藏功能（带localStorage持久化，关闭后不再显示）----------
+    const noticeBar = document.getElementById('noticeBar');
+    const closeNoticeBtn = document.getElementById('closeNoticeBtn');
+    
+    // 检查本地存储中通知栏的隐藏状态
+    const isNoticeHidden = localStorage.getItem('noticeBarHidden') === 'true';
+    if (isNoticeHidden) {
+      noticeBar.classList.add('hide-notice');
+    }
+    
+    // 关闭按钮点击事件：隐藏通知栏并存储状态
+    if (closeNoticeBtn) {
+      closeNoticeBtn.addEventListener('click', function() {
+        noticeBar.classList.add('hide-notice');
+        localStorage.setItem('noticeBarHidden', 'true');
+      });
+    }
+    // 说明：用户点击右侧 ✕ 按钮即可隐藏通知栏，并且之后刷新页面不会再出现。
+    // 如果未来希望重新显示通知，只需清除浏览器本地存储（localStorage）即可，或通过浏览器开发者工具执行 localStorage.removeItem('noticeBarHidden')
+    
     // 加载二维码JSON
     function loadQrcode() {
       fetch('qrcode.json')
