@@ -73,6 +73,13 @@
       height: auto;
       border-radius: 8px;
       border: 1px solid #eee;
+      /* 增加图片加载过渡 */
+      transition: opacity 0.3s ease;
+    }
+    /* 图片加载失败样式 */
+    .qrcode-img.error {
+      opacity: 0.5;
+      border-color: #e53935;
     }
     /* 二维码下方提示 */
     .qrcode-tip {
@@ -80,6 +87,12 @@
       color: #999;
       font-size: clamp(12px, 2vw, 14px);
       line-height: 1.5;
+    }
+    /* 图片加载失败提示 */
+    .img-error-tip {
+      color: #e53935;
+      font-size: 12px;
+      margin-top: 5px;
     }
     /* 加载状态样式 */
     .loading {
@@ -115,33 +128,34 @@
 
     // 加载二维码JSON配置
     function loadQrcode() {
-      const xhr = new XMLHttpRequest();
-      xhr.open('GET', 'qrcode.json', true);
-      xhr.onreadystatechange = function() {
-        if (xhr.readyState === 4) {
+      // 优先使用fetch（更现代的API，兼容性更好）
+      fetch('qrcode.json')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP错误，状态码：${response.status}`);
+          }
+          return response.json();
+        })
+        .then(qrcodeData => {
           // 隐藏加载状态
           loading.style.display = 'none';
-          if (xhr.status === 200) {
-            // 解析JSON数据
-            const qrcodeData = JSON.parse(xhr.responseText);
-            if (qrcodeData.length === 0) {
-              qrcodeList.innerHTML = '<div class="error">暂无二维码数据</div>';
-              return;
-            }
-            // 渲染二维码卡片
-            renderQrcode(qrcodeData);
-          } else {
-            // 加载失败提示
-            qrcodeList.innerHTML = '<div class="error">二维码加载失败，请刷新页面重试</div>';
+          
+          if (!qrcodeData || qrcodeData.length === 0) {
+            qrcodeList.innerHTML = '<div class="error">暂无二维码数据</div>';
+            return;
           }
-        }
-      };
-      // 网络错误处理
-      xhr.onerror = function() {
-        loading.style.display = 'none';
-        qrcodeList.innerHTML = '<div class="error">网络错误，无法加载二维码</div>';
-      };
-      xhr.send();
+          
+          // 渲染二维码卡片
+          renderQrcode(qrcodeData);
+        })
+        .catch(error => {
+          // 隐藏加载状态
+          loading.style.display = 'none';
+          // 打印错误信息（便于调试）
+          console.error('加载二维码失败：', error);
+          // 显示友好错误提示
+          qrcodeList.innerHTML = '<div class="error">二维码加载失败，请刷新页面重试</div>';
+        });
     }
 
     // 渲染二维码卡片
@@ -151,8 +165,14 @@
         html += `
           <div class="qrcode-card">
             <h3 class="card-name">${item.groupName}</h3>
-            <img src="${item.qrcodeUrl}" alt="${item.groupName}微信群二维码" class="qrcode-img">
-            <p class="qrcode-tip">微信长按识别 | 二维码过期请联系管理员</p>
+            <img 
+              src="${item.qrcodeUrl}" 
+              alt="${item.groupName}微信群二维码" 
+              class="qrcode-img"
+              onerror="this.classList.add('error'); this.nextElementSibling.style.display = 'block'"
+            >
+            <div class="img-error-tip" style="display: none;">图片加载失败，请检查链接或联系管理员</div>
+            <p class="qrcode-tip">长按识别 | 过期请联系君临天下盟主</p>
           </div>
         `;
       });
@@ -160,7 +180,7 @@
     }
 
     // 页面加载完成后执行
-    window.onload = loadQrcode;
+    window.addEventListener('DOMContentLoaded', loadQrcode);
   </script>
 </body>
 </html>
