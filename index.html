@@ -108,9 +108,50 @@
       color: #333;
       font-weight: 700;
       text-align: center;
-      margin-bottom: 30px;
+      margin-bottom: 15px;
       padding-bottom: 15px;
       border-bottom: 2px solid #f0f0f0;
+    }
+    /* 搜索框样式 */
+    .faq-search {
+      position: relative;
+      max-width: 600px;
+      margin: 0 auto 30px;
+    }
+    .faq-search-input {
+      width: 100%;
+      padding: 12px 20px 12px 45px;
+      border: 2px solid #f0f0f0;
+      border-radius: 8px;
+      font-size: clamp(14px, 2vw, 16px);
+      color: #333;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+    .faq-search-input:focus {
+      border-color: #007aff;
+      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+    }
+    .faq-search-icon {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #999;
+      font-size: 18px;
+    }
+    .faq-search-clear {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #999;
+      font-size: 16px;
+      cursor: pointer;
+      display: none;
+    }
+    .faq-search-clear:hover {
+      color: #e53935;
     }
     .faq-list {
       display: grid;
@@ -141,6 +182,11 @@
       margin-right: 8px;
       flex-shrink: 0;
     }
+    /* 高亮匹配文本 */
+    .highlight {
+      color: #007aff;
+      font-weight: 700;
+    }
     .faq-answer {
       font-size: clamp(13px, 2vw, 15px);
       color: #666;
@@ -166,6 +212,12 @@
       color: #e53935;
       font-size: 16px;
       padding: 20px 0;
+    }
+    .faq-no-result {
+      text-align: center;
+      color: #666;
+      font-size: 16px;
+      padding: 40px 0;
     }
 
     /* 响应式优化 */
@@ -193,6 +245,12 @@
     <!-- 新增常见问题板块 -->
     <div class="faq-section">
       <h2 class="faq-title">常见问题解答</h2>
+      <!-- 新增搜索框 -->
+      <div class="faq-search">
+        <span class="faq-search-icon">🔍</span>
+        <input type="text" class="faq-search-input" id="faqSearchInput" placeholder="输入关键词搜索问题，例如：吕布、元宝、华佗...">
+        <span class="faq-search-clear" id="faqSearchClear">✕</span>
+      </div>
       <div class="faq-list" id="faqList">
         <div class="faq-loading">正在加载常见问题...</div>
       </div>
@@ -203,6 +261,10 @@
     const qrcodeList = document.getElementById('qrcodeList');
     const loading = document.getElementById('loading');
     const faqList = document.getElementById('faqList');
+    const faqSearchInput = document.getElementById('faqSearchInput');
+    const faqSearchClear = document.getElementById('faqSearchClear');
+    // 存储原始FAQ数据
+    let faqOriginalData = [];
 
     // 加载二维码JSON
     function loadQrcode() {
@@ -245,7 +307,9 @@
       fetch('faq.json')
         .then(res => res.json())
         .then(data => {
+          faqOriginalData = JSON.parse(JSON.stringify(data)); // 深拷贝原始数据
           renderFaq(data);
+          initSearch(); // 初始化搜索功能
         })
         .catch(err => {
           faqList.innerHTML = '<div class="faq-error">常见问题加载失败，请刷新重试</div>';
@@ -253,17 +317,71 @@
     }
 
     // 渲染常见问题
-    function renderFaq(data) {
+    function renderFaq(data, searchKeyword = '') {
+      if (data.length === 0) {
+        faqList.innerHTML = '<div class="faq-no-result">未找到相关问题，请尝试其他关键词</div>';
+        return;
+      }
+
       let html = '';
       data.forEach((item, index) => {
+        let question = item.question;
+        let answer = item.answer;
+        
+        // 关键词高亮处理
+        if (searchKeyword) {
+          const reg = new RegExp(searchKeyword, 'gi');
+          question = question.replace(reg, match => `<span class="highlight">${match}</span>`);
+          answer = answer.replace(reg, match => `<span class="highlight">${match}</span>`);
+        }
+
         html += `
           <div class="faq-item">
-            <div class="faq-question">${item.question}</div>
-            <div class="faq-answer">${item.answer}</div>
+            <div class="faq-question">${question}</div>
+            <div class="faq-answer">${answer}</div>
           </div>
         `;
       });
       faqList.innerHTML = html;
+    }
+
+    // 初始化搜索功能
+    function initSearch() {
+      // 搜索输入事件
+      faqSearchInput.addEventListener('input', function() {
+        const keyword = this.value.trim();
+        // 显示/隐藏清除按钮
+        faqSearchClear.style.display = keyword ? 'block' : 'none';
+        
+        if (!keyword) {
+          // 无关键词时显示全部
+          renderFaq(faqOriginalData);
+          return;
+        }
+
+        // 筛选包含关键词的问题（标题+答案都匹配）
+        const filteredData = faqOriginalData.filter(item => {
+          return item.question.toLowerCase().includes(keyword.toLowerCase()) || 
+                 item.answer.toLowerCase().includes(keyword.toLowerCase());
+        });
+
+        renderFaq(filteredData, keyword);
+      });
+
+      // 清除按钮点击事件
+      faqSearchClear.addEventListener('click', function() {
+        faqSearchInput.value = '';
+        faqSearchClear.style.display = 'none';
+        renderFaq(faqOriginalData);
+        faqSearchInput.focus();
+      });
+
+      // 回车搜索
+      faqSearchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+        }
+      });
     }
 
     // 页面加载完成后执行
