@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>欢迎盟友 | 扫码进群</title>
+  <title>欢迎盟友们回家 | 扫码进群</title>
   <style>
     * {
       margin: 0;
@@ -21,7 +21,7 @@
       padding: 0 20px;
     }
     
-    /* ========= 通知栏样式（精简版：仅小喇叭+文字+关闭） ========= */
+    /* ========= 通知栏样式（精简版：小喇叭+文字+关闭） ========= */
     .notice-bar {
       max-width: 1200px;
       margin: 0 auto 20px auto;
@@ -93,7 +93,7 @@
       display: none;
     }
     
-    /* 原有样式保持完全不变 */
+    /* 原有样式保持不变 */
     .page-title {
       text-align: center;
       color: #333;
@@ -312,7 +312,7 @@
       <div class="notice-text">
         <span class="notice-icon">📢</span>
         <span class="notice-message">
-          <strong>欢迎大明的朋友们回家</strong>，让我们做大做强再创辉煌！
+          <strong>欢迎大明的盟友们回家</strong>，让我们一起做大做强再创辉煌！
         </span>
       </div>
       <button class="notice-close" id="closeNoticeBtn" aria-label="关闭通知">✕</button>
@@ -346,26 +346,86 @@
     const faqList = document.getElementById('faqList');
     const faqSearchInput = document.getElementById('faqSearchInput');
     const faqSearchClear = document.getElementById('faqSearchClear');
-    // 存储原始FAQ数据
     let faqOriginalData = [];
 
-    // ---------- 通知栏隐藏功能（localStorage持久化）----------
+    // ---------- 通知栏5分钟自动恢复逻辑 ----------
     const noticeBar = document.getElementById('noticeBar');
     const closeNoticeBtn = document.getElementById('closeNoticeBtn');
-    
-    const isNoticeHidden = localStorage.getItem('noticeBarHidden') === 'true';
-    if (isNoticeHidden) {
-      noticeBar.classList.add('hide-notice');
+    let hideTimer = null;          // 用于存储自动恢复的定时器
+    const HIDE_DURATION = 5 * 60 * 1000; // 5分钟（毫秒）
+    const STORAGE_KEY = 'noticeBarHiddenUntil'; // localStorage 存储隐藏截止时间戳
+
+    // 显示通知栏（移除隐藏类，并清除定时器记录）
+    function showNoticeBar() {
+      if (noticeBar.classList.contains('hide-notice')) {
+        noticeBar.classList.remove('hide-notice');
+      }
+      // 清除存储的截止时间
+      localStorage.removeItem(STORAGE_KEY);
+      if (hideTimer) {
+        clearTimeout(hideTimer);
+        hideTimer = null;
+      }
     }
-    
+
+    // 隐藏通知栏，并设置5分钟后自动显示（同时保存截止时间到localStorage）
+    function hideNoticeBarWithAutoShow() {
+      // 如果已经隐藏，不做重复操作
+      if (noticeBar.classList.contains('hide-notice')) return;
+      
+      // 隐藏通知栏
+      noticeBar.classList.add('hide-notice');
+      
+      // 计算截止时间（当前时间 + 5分钟）
+      const hiddenUntil = Date.now() + HIDE_DURATION;
+      localStorage.setItem(STORAGE_KEY, hiddenUntil.toString());
+      
+      // 清除之前的定时器（如果有）
+      if (hideTimer) {
+        clearTimeout(hideTimer);
+        hideTimer = null;
+      }
+      // 设置5分钟后自动显示
+      hideTimer = setTimeout(() => {
+        showNoticeBar();
+      }, HIDE_DURATION);
+    }
+
+    // 页面初始化时，检查是否需要保持隐藏（如果尚未到达截止时间）
+    function initNoticeBarState() {
+      const storedUntil = localStorage.getItem(STORAGE_KEY);
+      if (storedUntil) {
+        const untilTime = parseInt(storedUntil, 10);
+        const now = Date.now();
+        if (now < untilTime) {
+          // 隐藏还未到期，保持隐藏状态，并设置剩余时间的定时器
+          noticeBar.classList.add('hide-notice');
+          const remaining = untilTime - now;
+          if (hideTimer) clearTimeout(hideTimer);
+          hideTimer = setTimeout(() => {
+            showNoticeBar();
+          }, remaining);
+          return;
+        } else {
+          // 已过期，清除存储并确保显示
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      }
+      // 默认显示（且没有存储或已过期）
+      showNoticeBar();
+    }
+
+    // 绑定关闭按钮事件
     if (closeNoticeBtn) {
       closeNoticeBtn.addEventListener('click', function() {
-        noticeBar.classList.add('hide-notice');
-        localStorage.setItem('noticeBarHidden', 'true');
+        hideNoticeBarWithAutoShow();
       });
     }
-    
-    // 加载二维码JSON
+
+    // 页面加载时初始化通知栏状态
+    initNoticeBarState();
+
+    // ---------- 原有功能 ----------
     function loadQrcode() {
       fetch('qrcode.json')
         .then(res => res.json())
@@ -379,7 +439,6 @@
         });
     }
 
-    // 渲染二维码卡片（支持主图+备用图）
     function renderQrcode(data) {
       let html = '';
       data.forEach(item => {
@@ -401,7 +460,6 @@
       qrcodeList.innerHTML = html;
     }
 
-    // 加载常见问题JSON
     function loadFaq() {
       fetch('faq.json')
         .then(res => res.json())
@@ -415,24 +473,20 @@
         });
     }
 
-    // 渲染常见问题
     function renderFaq(data, searchKeyword = '') {
       if (data.length === 0) {
         faqList.innerHTML = '<div class="faq-no-result">未找到相关问题，请尝试其他关键词</div>';
         return;
       }
-
       let html = '';
-      data.forEach((item, index) => {
+      data.forEach((item) => {
         let question = item.question;
         let answer = item.answer;
-        
         if (searchKeyword) {
           const reg = new RegExp(searchKeyword, 'gi');
           question = question.replace(reg, match => `<span class="highlight">${match}</span>`);
           answer = answer.replace(reg, match => `<span class="highlight">${match}</span>`);
         }
-
         html += `
           <div class="faq-item">
             <div class="faq-question">${question}</div>
@@ -443,36 +497,28 @@
       faqList.innerHTML = html;
     }
 
-    // 初始化搜索功能
     function initSearch() {
       faqSearchInput.addEventListener('input', function() {
         const keyword = this.value.trim();
         faqSearchClear.style.display = keyword ? 'block' : 'none';
-        
         if (!keyword) {
           renderFaq(faqOriginalData);
           return;
         }
-
         const filteredData = faqOriginalData.filter(item => {
           return item.question.toLowerCase().includes(keyword.toLowerCase()) || 
                  item.answer.toLowerCase().includes(keyword.toLowerCase());
         });
-
         renderFaq(filteredData, keyword);
       });
-
       faqSearchClear.addEventListener('click', function() {
         faqSearchInput.value = '';
         faqSearchClear.style.display = 'none';
         renderFaq(faqOriginalData);
         faqSearchInput.focus();
       });
-
       faqSearchInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-        }
+        if (e.key === 'Enter') e.preventDefault();
       });
     }
 
